@@ -1,0 +1,26 @@
+Enable xinetd, RHEL
+---
+
+# yum install xinetd
+
+/etc/xinetd.d/livestatus
+service livestatus
+{
+        type            = UNLISTED
+        port            = 6557
+        socket_type     = stream
+        protocol        = tcp
+        flags           = IPv4
+        wait            = no
+        cps             = 100 3
+        instances       = 500
+        per_source      = 250
+        flags           = NODELAY
+        user            = nagios
+        server          = /usr/bin/unixcat
+        server_args     = /opt/monitor/var/rw/live
+#       only_from       = 127.0.0.1 192.168.0.0
+        disable         = no
+}
+
+systemctl restart xinetd
