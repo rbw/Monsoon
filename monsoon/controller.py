@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import ujson
 
 from aioli.utils.http import jsonify
 from aioli.package.controller import BaseHttpController, BaseWebSocketController, route, input_load
@@ -28,19 +29,19 @@ class HttpController(BaseHttpController):
     async def host_get(self, host_name):
         return jsonify(await self.service.get_host(host_name))
 
-    @route('/services', 'GET')
-    async def services_get(self, _):
-        return jsonify(await self.service.get_services())
+    @route('/hosts/{host_name}/services', 'GET')
+    async def services_get(self, host_name):
+        return jsonify(await self.service.get_host_services(host_name))
 
 
-class WebSocketController(BaseWebSocketController):
+class HostSocketController(BaseWebSocketController):
     path = '/hosts'
     redis = None
 
     def __init__(self, *args, **kwargs):
         self.service = MonsoonService()
         self.redis_service = RedisService()
-        super(WebSocketController, self).__init__(*args, **kwargs)
+        super(HostSocketController, self).__init__(*args, **kwargs)
 
     async def _create_listener(self, ws, sub):
         while True:
@@ -53,5 +54,26 @@ class WebSocketController(BaseWebSocketController):
 
         await ws.accept()
 
+        hosts = await self.service.get_hosts()
+        await ws.send_text(ujson.dumps(hosts))
+
     async def on_disconnect(self, websocket, close_code):
         self.redis.close()
+
+
+class HostsSocketController(HostSocketController):
+    path = '/services'
+    redis = None
+
+    async def on_connect(self, ws):
+        # self.redis, subscription = await self.redis_service.subscribe('hosts')
+        # asyncio.ensure_future(self._create_listener(ws, subscription))
+
+        await ws.accept()
+
+        host_name = ws.query_params['host_name']
+        host = await self.service.get_services(query_filter=f"host_name = {host_name}")
+        await ws.send_text(ujson.dumps(host))
+
+    async def on_disconnect(self, websocket, close_code):
+        pass
