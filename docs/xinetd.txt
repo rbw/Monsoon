@@ -23,4 +23,5 @@ service livestatus
         disable         = no
 }
 
-systemctl restart xinetd
+# systemctl restart xinetd
+# iptables -A IN_public_allow -p tcp --dport 6557 -j ACCEPT
