@@ -66,14 +66,14 @@ class HostsSocketController(HostSocketController):
     redis = None
 
     async def on_connect(self, ws):
-        # self.redis, subscription = await self.redis_service.subscribe('hosts')
-        # asyncio.ensure_future(self._create_listener(ws, subscription))
+        self.redis, subscription = await self.redis_service.subscribe('services')
+        asyncio.ensure_future(self._create_listener(ws, subscription))
 
         await ws.accept()
 
         host_name = ws.query_params['host_name']
-        host = await self.service.get_services(query_filter=f"host_name = {host_name}")
-        await ws.send_text(ujson.dumps(host))
+        host_services = await self.service.get_services(query_filter=f"host_name = {host_name}")
+        await ws.send_text(ujson.dumps(host_services))
 
     async def on_disconnect(self, websocket, close_code):
-        pass
+        self.redis.close()
